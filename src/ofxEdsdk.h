@@ -45,6 +45,10 @@ namespace ofxEdsdk {
         void endMovieRecording();
         bool isMovieNew();
         
+        void setDriveMode(EdsUInt32 driveMode);
+        
+//        EdsCameraRef camera;
+        
     protected:
         void initialize();
         void startCapture();
@@ -55,6 +59,8 @@ namespace ofxEdsdk {
 		
 		RateTimer fps;
         float bytesPerFrame;
+        
+        std::deque< std::pair<EdsUInt32, EdsUInt32> > propertyQueue;
 		
 		/*
 		 Live view data is read from the camera into liveBufferBack when DownloadEvfData()
@@ -97,6 +103,7 @@ namespace ofxEdsdk {
 		bool photoDataReady; // Photo data has been downloaded at least once.
 		bool needToSendKeepAlive; // Send keepalive next chance we get.
 		bool needToDownloadImage; // Download image next chance we get.
+        bool needToSetProperty;
         
         bool movieNew;
         bool needToStartRecording; // threadedFunction() should start recording next chance it gets.
@@ -118,6 +125,7 @@ namespace ofxEdsdk {
 		void setSendKeepAlive();
 		
 		EdsDirectoryItemRef directoryItem;
+        EdsUInt32 driveMode;
         
         int deviceId;
         int orientationMode;

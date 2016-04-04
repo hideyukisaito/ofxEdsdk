@@ -58,6 +58,7 @@ namespace ofxEdsdk {
     deviceId(0),
     orientationMode(0),
     bytesPerFrame(0),
+    driveMode(0),
     connected(false),
     liveViewReady(false),
     liveDataReady(false),
@@ -73,6 +74,7 @@ namespace ofxEdsdk {
     photoDataReady(false),
     needToSendKeepAlive(false),
     needToDownloadImage(false),
+    needToSetProperty(false),
     resetIntervalMinutes(15) {
         liveBufferMiddle.resize(OFX_EDSDK_BUFFER_SIZE);
         for(int i = 0; i < liveBufferMiddle.maxSize(); i++) {
@@ -255,7 +257,7 @@ namespace ofxEdsdk {
 	
 	void Camera::drawPhoto(float x, float y, float width, float height) {
 		if(photoDataReady) {
-            getPhotoTexture().draw(x, y, width, height);
+            const_cast<ofTexture&>(getPhotoTexture()).draw(x, y, width, height);
 		}
 	}
 	
@@ -293,6 +295,14 @@ namespace ofxEdsdk {
     void Camera::setSendKeepAlive() {
         lock();
         needToSendKeepAlive = true;
+        unlock();
+    }
+    
+    void Camera::setDriveMode(EdsUInt32 driveMode) {
+        lock();
+        this->driveMode = driveMode;
+        propertyQueue.push_back(std::make_pair(kEdsPropID_DriveMode, driveMode));
+        needToSetProperty = true;
         unlock();
     }
     
@@ -377,6 +387,25 @@ namespace ofxEdsdk {
                 swap(liveBufferBack, liveBufferMiddle.back());
                 liveBufferMiddle.push();
                 unlock();
+            }
+        }
+        
+        if (needToSetProperty) {
+            try {
+                ofLog() << "start setting property";
+                
+                for (std::size_t i = 0; i < propertyQueue.size(); ++i) {
+                    ofLog() << std::hex << "property: " << propertyQueue.at(i).first;
+                    
+                    EdsError err = EdsSetPropertyData(camera, propertyQueue.at(i).first, 0, sizeof(propertyQueue.at(i).second), &propertyQueue.at(i).second);
+                }
+                
+                lock();
+                propertyQueue.clear();
+                needToSetProperty = false;
+                unlock();
+            } catch (Eds::Exception& e) {
+                ofLogError() << "Error while setting property: " << e.what();
             }
         }
         
