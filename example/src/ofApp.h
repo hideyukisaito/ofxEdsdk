@@ -15,4 +15,9 @@ public:
 	ofxEdsdk::Camera camera;
     
     bool bIsRecordingMovie;
+    
+    void onCameraAdded(ofEventArgs &);
+    void onCameraRemoved(ofEventArgs &);
+    void onLiveViewStarted(ofEventArgs &);
+    void onLiveViewStopped(ofEventArgs &);
 };

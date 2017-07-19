@@ -20,6 +20,15 @@
 
 namespace ofxEdsdk {
     
+    EdsError EDSCALLBACK Camera::onCameraAdded(EdsVoid *context)
+    {
+        ofLogNotice(__PRETTY_FUNCTION__) << "camera added";
+        
+        ((Camera*)context)->setup();
+        
+        return EDS_ERR_OK;
+    }
+    
     EdsError EDSCALLBACK Camera::handleObjectEvent(EdsObjectEvent event, EdsBaseRef object, EdsVoid* context) {
         ofLogVerbose() << "object event " << Eds::getObjectEventString(event);
         if(object) {
@@ -47,10 +56,25 @@ namespace ofxEdsdk {
     }
     
     EdsError EDSCALLBACK Camera::handleCameraStateEvent(EdsStateEvent event, EdsUInt32 param, EdsVoid* context) {
-        ofLogVerbose() << "camera state event " << Eds::getStateEventString(event) << ": " << param;
-        if(event == kEdsStateEvent_WillSoonShutDown) {
-            ((Camera*) context)->setSendKeepAlive();
+        
+        switch (event)
+        {
+            case kEdsStateEvent_WillSoonShutDown:
+                ((Camera*)context)->setSendKeepAlive();
+                break;
+                
+            case kEdsStateEvent_Shutdown:
+                ofLogNotice(__PRETTY_FUNCTION__) << "camera shutdown or disconnected";
+                ((Camera*)context)->close();
+                
+                ofEventArgs arg;
+                ofNotifyEvent(((Camera*)context)->CAMERA_REMOVED, arg);
+                break;
+                
+            default:
+                break;
         }
+        
         return EDS_ERR_OK;
     }
     
@@ -59,6 +83,7 @@ namespace ofxEdsdk {
     orientationMode(0),
     bytesPerFrame(0),
     driveMode(0),
+    initialized(false),
     connected(false),
     liveViewReady(false),
     liveDataReady(false),
@@ -103,6 +128,7 @@ namespace ofxEdsdk {
     }
     
     bool Camera::close() {
+        initialized = false;
         stopThread();
         // for some reason waiting for the thread keeps it from
         // completing, but sleeping then stopping capture is ok.
@@ -321,14 +347,18 @@ namespace ofxEdsdk {
     
     void Camera::initialize() {
         try {
-            Eds::InitializeSDK();
+            if (!initialized)
+            {
+                Eds::InitializeSDK();
+                initialized = true;
+            }
             
             EdsCameraListRef cameraList;
             Eds::GetCameraList(&cameraList);
             
             EdsUInt32 cameraCount;
             Eds::GetChildCount(cameraList, &cameraCount);
-            
+
             if(cameraCount > 0) {
                 EdsInt32 cameraIndex = deviceId;
                 Eds::GetChildAtIndex(cameraList, cameraIndex, &camera);
@@ -340,8 +370,15 @@ namespace ofxEdsdk {
                 Eds::GetDeviceInfo(camera, &info);
                 Eds::SafeRelease(cameraList);
                 ofLogVerbose("ofxEdsdk::setup") << "connected camera model: " <<  info.szDeviceDescription << " " << info.szPortName << endl;
+                
+                // notify camera added
+                ofEventArgs arg;
+                ofNotifyEvent(CAMERA_ADDED, arg);
             } else {
-                ofLogError() << "No cameras are connected for ofxEds::Camera::setup().";
+                ofLogError(__PRETTY_FUNCTION__) << "No cameras are connected for ofxEds::Camera::setup().";
+                
+                Eds::SetCameraAddedHandler(NULL, this);
+                Eds::SetCameraAddedHandler(onCameraAdded, this);
             }
         } catch (Eds::Exception& e) {
             ofLogError() << "There was an error during Camera::setup(): " << e.what();
@@ -354,6 +391,9 @@ namespace ofxEdsdk {
             connected = true;
             if(useLiveView) {
                 Eds::StartLiveview(camera);
+                
+                ofEventArgs args;
+                ofNotifyEvent(LIVE_VIEW_STARTED, args, this);
             }
         } catch (Eds::Exception& e) {
             ofLogError() << "There was an error opening the camera, or starting live view: " << e.what();
@@ -368,6 +408,9 @@ namespace ofxEdsdk {
                 if(liveViewReady) {
                     Eds::EndLiveview(camera);
                     liveViewReady = false;
+                    
+                    ofEventArgs args;
+                    ofNotifyEvent(LIVE_VIEW_STOPPED, args, this);
                 }
                 Eds::CloseSession(camera);
                 Eds::TerminateSDK();

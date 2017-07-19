@@ -1,6 +1,12 @@
 #include "ofApp.h"
 
 void ofApp::setup() {
+    
+    ofAddListener(camera.CAMERA_ADDED, this, &ofApp::onCameraAdded);
+    ofAddListener(camera.CAMERA_REMOVED, this, &ofApp::onCameraRemoved);
+    ofAddListener(camera.LIVE_VIEW_STARTED, this, &ofApp::onLiveViewStarted);
+    ofAddListener(camera.LIVE_VIEW_STOPPED, this, &ofApp::onLiveViewStopped);
+    
     ofSetFrameRate(60);
 	ofSetVerticalSync(true);
     bIsRecordingMovie = false;
@@ -61,4 +67,24 @@ void ofApp::keyPressed(int key) {
         }
 	}
 
+}
+
+void ofApp::onCameraAdded(ofEventArgs &)
+{
+    ofLogNotice(__PRETTY_FUNCTION__) << "camera added";
+}
+
+void ofApp::onCameraRemoved(ofEventArgs &)
+{
+    ofLogNotice(__PRETTY_FUNCTION__) << "camera removed";
+}
+
+void ofApp::onLiveViewStarted(ofEventArgs &)
+{
+    ofLogNotice(__PRETTY_FUNCTION__) << "live view started";
+}
+
+void ofApp::onLiveViewStopped(ofEventArgs &)
+{
+    ofLogNotice(__PRETTY_FUNCTION__) << "live view stopped";
 }

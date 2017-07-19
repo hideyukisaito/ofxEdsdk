@@ -49,7 +49,10 @@ namespace ofxEdsdk {
         
         void setDriveMode(EdsUInt32 driveMode);
         
-//        EdsCameraRef camera;
+        ofEvent<ofEventArgs> CAMERA_ADDED;
+        ofEvent<ofEventArgs> CAMERA_REMOVED;
+        ofEvent<ofEventArgs> LIVE_VIEW_STARTED;
+        ofEvent<ofEventArgs> LIVE_VIEW_STOPPED;
         
     protected:
         void initialize();
@@ -93,6 +96,7 @@ namespace ofxEdsdk {
 		 is and isn't ready, and syncing data between the main thread and the
 		 capture thread.
 		 */
+        bool initialized;
 		bool connected; // camera is valid, OpenSession was successful, you can use Eds(camera) now.
         bool useLiveView; // Whether to initialize live view on setup().
 		bool liveViewReady; // Live view is initialized and connected, ready for downloading.
@@ -117,6 +121,8 @@ namespace ofxEdsdk {
 		float resetIntervalMinutes;
 		float lastResetTime;
 		void resetLiveView();
+        
+        static EdsError EDSCALLBACK onCameraAdded(EdsVoid *context);
 		
 		static EdsError EDSCALLBACK handleObjectEvent(EdsObjectEvent event, EdsBaseRef object, EdsVoid* context);
 		static EdsError EDSCALLBACK handlePropertyEvent(EdsPropertyEvent event, EdsPropertyID propertyId, EdsUInt32 param, EdsVoid* context);
