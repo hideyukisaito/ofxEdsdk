@@ -46,6 +46,7 @@ namespace ofxEdsdk {
         bool isMovieNew();
 
         bool isConnected() { return connected; }
+        bool isLiveViewReady() { return liveViewReady; };
         
         void setDriveMode(EdsUInt32 driveMode);
         
